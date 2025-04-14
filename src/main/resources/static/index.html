@@ -2,10 +2,260 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>My Application</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Store Management System</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+        h1, h2 {
+            text-align: center;
+        }
+        #productForm, #filterForm {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="text"], input[type="number"], button {
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            width: calc(100% - 18px);
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #productList {
+            list-style: none;
+            padding: 0;
+        }
+        #productList li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        #productList li:last-child {
+            border-bottom: none;
+        }
+        .error {
+            color: red;
+            margin-top: 10px;
+        }
+    </style>
 </head>
 <body>
+    <h1>Store Management System</h1>
 
+    <div id="productForm">
+        <h2>Add New Product</h2>
+        <form id="addProductForm">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" required>
 
+            <label for="category">Category:</label>
+            <input type="text" id="category" name="category">
+
+            <label for="price">Price:</label>
+            <input type="number" id="price" name="price" step="0.01" required>
+
+            <label for="stockQuantity">Stock Quantity:</label>
+            <input type="number" id="stockQuantity" name="stockQuantity" required>
+
+            <button type="submit">Add Product</button>
+            <div id="addError" class="error" style="display:none;"></div>
+            <div id="addSuccess" style="color: green; margin-top: 10px; display:none;">Product added successfully!</div>
+        </form>
+    </div>
+
+    <div id="filterForm">
+        <h2>Filter Products</h2>
+        <form id="filterProductsForm">
+            <label for="filterName">Name:</label>
+            <input type="text" id="filterName" name="name" placeholder="Filter by name">
+
+            <label for="filterCategory">Category:</label>
+            <input type="text" id="filterCategory" name="category" placeholder="Filter by category">
+
+            <label for="minPrice">Min Price:</label>
+            <input type="number" id="minPrice" name="minPrice" step="0.01" placeholder="Min price">
+
+            <label for="maxPrice">Max Price:</label>
+            <input type="number" id="maxPrice" name="maxPrice" step="0.01" placeholder="Max price">
+
+            <label for="minStock">Min Stock:</label>
+            <input type="number" id="minStock" name="minStock" placeholder="Min stock">
+
+            <label for="maxStock">Max Stock:</label>
+            <input type="number" id="maxStock" name="maxStock" placeholder="Max stock">
+
+            <button type="button" onclick="filterProducts()">Filter</button>
+            <button type="button" onclick="loadProducts()">Reset Filter</button>
+        </form>
+    </div>
+
+    <h2>Product List</h2>
+    <ul id="productList">
+        <li>Loading products...</li>
+    </ul>
+    <div id="listError" class="error" style="display:none;">Failed to load products.</div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', loadProducts);
+
+        const productListElement = document.getElementById('productList');
+        const addProductForm = document.getElementById('addProductForm');
+        const addErrorElement = document.getElementById('addError');
+        const addSuccessElement = document.getElementById('addSuccess');
+        const filterProductsForm = document.getElementById('filterProductsForm');
+        const listErrorElement = document.getElementById('listError');
+
+        addProductForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            addErrorElement.style.display = 'none';
+            addSuccessElement.style.display = 'none';
+
+            const formData = new FormData(this);
+            const productData = {
+                name: formData.get('name'),
+                category: formData.get('category'),
+                price: parseFloat(formData.get('price')),
+                stockQuantity: parseInt(formData.get('stockQuantity'))
+            };
+
+            fetch('/api/products', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(productData),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {throw err;});
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Product added:', data);
+                addSuccessElement.style.display = 'block';
+                addProductForm.reset();
+                loadProducts(); // Reload the product list
+            })
+            .catch(error => {
+                console.error('Error adding product:', error);
+                addErrorElement.textContent = error.message || 'Failed to add product.';
+                addErrorElement.style.display = 'block';
+            });
+        });
+
+        function loadProducts() {
+            listErrorElement.style.display = 'none';
+            productListElement.innerHTML = '<li>Loading products...</li>';
+            fetch('/api/products')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(products => {
+                    displayProducts(products);
+                })
+                .catch(error => {
+                    console.error('Error loading products:', error);
+                    productListElement.innerHTML = '<li>Error loading products.</li>';
+                    listErrorElement.textContent = error.message;
+                    listErrorElement.style.display = 'block';
+                });
+        }
+
+        function filterProducts() {
+            listErrorElement.style.display = 'none';
+            productListElement.innerHTML = '<li>Loading products...</li>';
+
+            const formData = new FormData(filterProductsForm);
+            const params = new URLSearchParams();
+            if (formData.get('name')) params.append('name', formData.get('name'));
+            if (formData.get('category')) params.append('category', formData.get('category'));
+            if (formData.get('minPrice')) params.append('minPrice', formData.get('minPrice'));
+            if (formData.get('maxPrice')) params.append('maxPrice', formData.get('maxPrice'));
+            if (formData.get('minStock')) params.append('minStock', formData.get('minStock'));
+            if (formData.get('maxStock')) params.append('maxStock', formData.get('maxStock'));
+
+            const url = `/api/products?${params.toString()}`;
+
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(products => {
+                    displayProducts(products);
+                })
+                .catch(error => {
+                    console.error('Error filtering products:', error);
+                    productListElement.innerHTML = '<li>Error loading filtered products.</li>';
+                    listErrorElement.textContent = error.message;
+                    listErrorElement.style.display = 'block';
+                });
+        }
+
+        function displayProducts(products) {
+            productListElement.innerHTML = '';
+            if (products.length === 0) {
+                productListElement.innerHTML = '<li>No products found.</li>';
+                return;
+            }
+            products.forEach(product => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${product.name} (${product.category || 'N/A'}): $${product.price.toFixed(2)}, Stock: ${product.stockQuantity}`;
+
+                // Add delete button
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Delete';
+                deleteButton.style.marginLeft = '10px';
+                deleteButton.onclick = function() {
+                    deleteProduct(product.id);
+                };
+                listItem.appendChild(deleteButton);
+
+                productListElement.appendChild(listItem);
+            });
+        }
+
+        function deleteProduct(id) {
+            if (confirm(`Are you sure you want to delete product with ID: ${id}?`)) {
+                fetch(`/api/products/${id}`, {
+                    method: 'DELETE',
+                })
+                .then(response => {
+                    if (response.ok) {
+                        console.log(`Product with ID ${id} deleted successfully.`);
+                        loadProducts(); // Reload the product list
+                    } else {
+                        return response.json().then(err => {throw err;});
+                    }
+                })
+                .catch(error => {
+                    console.error(`Error deleting product with ID ${id}:`, error);
+                    alert(error.message || `Failed to delete product with ID ${id}.`);
+                });
+            }
+        }
+    </script>
 </body>
 </html>
