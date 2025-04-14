@@ -74,15 +74,91 @@ public class ProductService {
     }
 
     // TODO: Method to search products by name
+  public List<Product> searchProductsByName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            return new ArrayList<>(products);
+        }
+        return products.stream()
+                .filter(p -> p.getName().toLowerCase().contains(name.toLowerCase()))
+                .collect(Collectors.toList());
+    }
 
 
     // TODO: Method to filter products by category
-
+    public List<Product> filterProductsByCategory(String category) {
+        if (category == null || category.trim().isEmpty()) {
+            return new ArrayList<>(products);
+        }
+        return products.stream()
+                .filter(p -> p.getCategory().equalsIgnoreCase(category))
+                .collect(Collectors.toList());
+    }
 
     // TODO: Method to filter products by price range
-
+     public List<Product> filterProductsByPriceRange(Double minPrice, Double maxPrice) {
+        if (minPrice == null && maxPrice == null) {
+            return new ArrayList<>(products);
+        }
+        return products.stream()
+                .filter(p -> (minPrice == null || p.getPrice() >= minPrice) &&
+                             (maxPrice == null || p.getPrice() <= maxPrice))
+                .collect(Collectors.toList());
+    }
 
     // TODO: Method to filter products by stock quantity range
+public List<Product> filterProductsByStockQuantityRange(Integer minStock, Integer maxStock) {
+        if (minStock == null && maxStock == null) {
+            return new ArrayList<>(products);
+        }
+        return products.stream()
+                .filter(p -> (minStock == null || p.getStockQuantity() >= minStock) &&
+                             (maxStock == null || p.getStockQuantity() <= maxStock))
+                .collect(Collectors.toList());
+    }
 
-    
+    public List<Product> getAllProducts(String name, String category, Double minPrice, Double maxPrice, Integer minStock, Integer maxStock) {
+        return products.stream()
+                .filter(p -> name == null || p.getName().toLowerCase().contains(name.toLowerCase()))
+                .filter(p -> category == null || p.getCategory().equalsIgnoreCase(category))
+                .filter(p -> minPrice == null || p.getPrice() >= minPrice)
+                .filter(p -> maxPrice == null || p.getPrice() <= maxPrice)
+                .filter(p -> minStock == null || p.getStockQuantity() >= minStock)
+                .filter(p -> maxStock == null || p.getStockQuantity() <= maxStock)
+                .collect(Collectors.toList());
+    }
+
+    public Optional<Product> getProductById(Integer id) {
+        return products.stream().filter(p -> p.getId().equals(id)).findFirst();
+    }
+
+    public Product addProduct(Product product) {
+        product.setId(currentId++);
+        products.add(product);
+        return product;
+    }
+
+    public Optional<Product> updateProduct(Integer id, Product updatedProduct) {
+        Optional<Product> existingProduct = getProductById(id);
+        if (existingProduct.isPresent()) {
+            Product product = existingProduct.get();
+            if (updatedProduct.getName() != null) {
+                product.setName(updatedProduct.getName());
+            }
+            if (updatedProduct.getCategory() != null) {
+                product.setCategory(updatedProduct.getCategory());
+            }
+            if (updatedProduct.getPrice() != null) {
+                product.setPrice(updatedProduct.getPrice());
+            }
+            if (updatedProduct.getStockQuantity() != null) {
+                product.setStockQuantity(updatedProduct.getStockQuantity());
+            }
+            return Optional.of(product);
+        }
+        return Optional.empty();
+    }
+
+    public boolean deleteProduct(Integer id) {
+        return products.removeIf(product -> product.getId().equals(id));
+    }
 }
